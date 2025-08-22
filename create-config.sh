@@ -9,11 +9,5 @@ echo "const config = {
     messagingSenderId: '$VITE_FIREBASE_SENDER_ID',
     appId: '$VITE_FIREBASE_APP_ID'
   }, 
-  cloudinary: {
-    cloudName: '$VITE_CLOUDINARY_CLOUD_NAME',
-    uploadPreset: '$VITE_CLOUDINARY_UPLOAD_PRESET'
-  },
-  razorpay: {
-    keyId: '$VITE_RAZORPAY_KEY_ID'
-  }
+  
 };" > config.js
