@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
         body { font-family: 'Poppins', sans-serif; }
         .thumbnail.active { border-color: #000; }
@@ -59,60 +62,88 @@
     </footer>
     
     <div id="toast" class="toast"></div>
-
+    <script src="create-config.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', async () => {
             const productDetailContainer = document.getElementById('product-detail-container');
             const params = new URLSearchParams(window.location.search);
             const productId = params.get('id');
 
-            function updateCartCount() {
-                const cart = JSON.parse(localStorage.getItem('cart')) || [];
-                const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-                document.getElementById('cart-count').textContent = totalItems;
-            }
-
-            function showToast(message) {
-                const toast = document.getElementById('toast');
-                toast.textContent = message;
-                toast.classList.add('show');
-                setTimeout(() => toast.classList.remove('show'), 3000);
-            }
-
-            function renderRelatedProducts(currentProductId, currentCategory) {
-                const products = JSON.parse(localStorage.getItem('products')) || [];
-                const relatedGrid = document.getElementById('related-products-grid');
-                const relatedProducts = products.filter(p => p.id != currentProductId && p.category === currentCategory).slice(0, 4);
-
-                relatedGrid.innerHTML = relatedProducts.map(p => `
-                    <a href="product.html?id=${p.id}" class="group">
-                        <div class="bg-gray-100 rounded-lg overflow-hidden">
-                            <img src="${(p.images && p.images.length > 0) ? p.images[0] : 'https://placehold.co/600x600/e0e0e0/757575?text=No+Image'}" alt="${p.name}" class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-300">
-                        </div>
-                        <div class="pt-4 text-left">
-                            <h3 class="font-semibold text-md">${p.name}</h3>
-                            <p class="text-gray-800 font-bold text-lg mt-1">₹${p.price}</p>
-                        </div>
-                    </a>`).join('');
-            }
+            updateCartCount();
 
             if (!productId) {
                 productDetailContainer.innerHTML = '<p class="text-center text-red-500 text-xl">Error: Product ID is missing.</p>';
                 return;
             }
 
-            const products = JSON.parse(localStorage.getItem('products')) || [];
-            const product = products.find(p => p.id == productId);
+            try {
+                const doc = await db.collection('products').doc(productId).get();
 
-            if (!product) {
-                productDetailContainer.innerHTML = '<p class="text-center text-red-500 text-xl">Sorry, this product could not be found.</p>';
-                return;
+                if (!doc.exists) {
+                    productDetailContainer.innerHTML = '<p class="text-center text-red-500 text-xl">Sorry, this product could not be found.</p>';
+                    return;
+                }
+
+                const product = { id: doc.id, ...doc.data() };
+                renderProductDetails(product);
+                renderRelatedProducts(product.id, product.category);
+
+            } catch (error) {
+                console.error("Error fetching product:", error);
+                productDetailContainer.innerHTML = '<p class="text-center text-red-500 text-xl">Error loading product details.</p>';
             }
+        });
 
-            // --- RENDER PRODUCT DETAILS ---
+        function updateCartCount() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-count').textContent = totalItems;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function renderRelatedProducts(currentProductId, currentCategory) {
+            const relatedGrid = document.getElementById('related-products-grid');
+            try {
+                const snapshot = await db.collection('products')
+                    .where('category', '==', currentCategory)
+                    .limit(5) // Fetch a few more in case one is the current product
+                    .get();
+
+                const relatedProducts = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(p => p.id !== currentProductId)
+                    .slice(0, 4);
+
+                relatedGrid.innerHTML = relatedProducts.map(p => `
+                    <a href="product.html?id=${p.id}" class="group">
+                        <div class="bg-gray-100 rounded-lg overflow-hidden">
+                            <img src="${(p.images && p.images.length > 0) ? p.images[0] : 'https://placehold.co/600x600'}" alt="${p.name}" class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-300">
+                        </div>
+                        <div class="pt-4 text-left">
+                            <h3 class="font-semibold text-md">${p.name}</h3>
+                            <p class="text-gray-800 font-bold text-lg mt-1">₹${p.price}</p>
+                        </div>
+                    </a>`).join('');
+            } catch (error) {
+                console.error("Error fetching related products:", error);
+                relatedGrid.innerHTML = '<p>Could not load related products.</p>';
+            }
+        }
+
+        function renderProductDetails(product) {
+            document.title = `${product.name} - Vivexa Store`;
             productDetailContainer.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                    <div class="flex flex-col gap-4 sticky top-28">
+                    <div class="flex flex-col gap-4 lg:sticky top-28">
                         <img id="main-image" src="${(product.images && product.images.length > 0) ? product.images[0] : 'https://placehold.co/600x600'}" alt="${product.name}" class="w-full h-auto max-h-[700px] object-cover rounded-lg shadow-sm">
                         <div id="thumbnail-gallery" class="grid grid-cols-5 gap-4">
                             ${(product.images || []).map((img, index) => `
@@ -124,7 +155,7 @@
                     <div>
                         <p class="text-sm uppercase font-semibold text-gray-500 tracking-wider mb-2">${product.category}</p>
                         <h1 class="text-3xl lg:text-4xl font-bold mb-3">${product.name}</h1>
-                        <p class="text-3xl text-gray-800 font-semibold mb-6">₹${product.price}</p>
+                        <p class="text-3xl text-gray-800 font-semibold mb-6">₹${product.price.toFixed(2)}</p>
                         
                         <div class="border-t border-b py-6 mb-6">
                              <h3 class="text-sm font-semibold uppercase tracking-wider mb-2">Description</h3>
@@ -150,7 +181,11 @@
                 </div>
             `;
             
-            // --- EVENT LISTENERS ---
+            // Re-attach event listeners after rendering
+            attachEventListeners(product);
+        }
+        
+        function attachEventListeners(product) {
             const mainImage = document.getElementById('main-image');
             const thumbnails = document.querySelectorAll('.thumbnail');
             thumbnails.forEach(thumb => {
@@ -209,10 +244,7 @@
                 updateCartCount();
                 showToast('Product added to cart!');
             });
-            
-            renderRelatedProducts(productId, product.category);
-            updateCartCount();
-        });
+        }
     </script>
 </body>
 </html>
