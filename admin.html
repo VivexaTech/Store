@@ -116,7 +116,7 @@
             </form>
         </div>
     </main>
-
+<script src="create-config.js"></script>
 <script>
     // Define the single, authoritative owner's email
     const ownerEmail = "vivexatech@gmail.com"; 
@@ -126,14 +126,7 @@
     const CLOUDINARY_UPLOAD_PRESET = "vivexa_img";
     
     // **PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE**
-    const firebaseConfig = {
-      apiKey: "process.meta.env.VITE_FIREBASE_API_KEY",
-      authDomain: "process.meta.env.VITE_FIREBASE_AUTH_KEY",
-      projectId: "process.meta.env.VITE_FIREBASE_PROJECT_KEY",
-      storageBucket: "process.meta.env.VITE_FIREBASE_STORAGE_KEY",
-      messagingSenderId: "process.meta.env.VITE_FIREBASE_SENDER_KEY",
-      appId: "process.meta.env.VITE_FIREBASE_APP_KEY"
-    };
+   
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -340,4 +333,5 @@
     });
 </script>
 </body>
+
 </html>
