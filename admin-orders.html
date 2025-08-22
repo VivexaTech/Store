@@ -6,9 +6,12 @@
     <title>Manage Orders - Vivexa Store</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; }
         .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background-color: #22c55e; color: white; padding: 0.75rem 1.25rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); opacity: 0; transform: translateY(20px); transition: all 0.3s ease-in-out; z-index: 1000; }
@@ -34,112 +37,118 @@
     <div id="toast-notification" class="toast"></div>
 
 <script src="create-config.js"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const ownerEmail = "vivexatech@gmail.com";
-        // --- PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE ---
+        
+        // Check if firebaseConfig is defined (from create-config.js)
+        if (typeof firebaseConfig === 'undefined') {
+            console.error("Firebase config is not loaded. Make sure create-config.js is correct.");
+            alert("Firebase configuration is missing. The app cannot start.");
+            return;
+        }
 
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
         const ordersContainer = document.getElementById('orders-container');
         
-        // Create an Audio object for the notification sound
-        const notificationSound = new Audio('simple-notification-152054.mp3'); 
-
-        // --- Important: Browser Autoplay Policy ---
-        // Sounds cannot play automatically until the user clicks somewhere on the page first.
-        // We'll enable sound after the first user interaction.
-        let canPlaySound = false;
-        document.body.addEventListener('click', () => {
-            canPlaySound = true;
-            console.log("Sound notifications enabled.");
-        }, { once: true }); // This event listener will run only once
-
-
+        // --- AUTHENTICATION CHECK ---
         auth.onAuthStateChanged(user => {
             if (user && user.email === ownerEmail) {
-                loadAndListenForOrders(); // Changed function name for clarity
+                // If admin is logged in, load orders and set up notifications
+                loadAndListenForOrders();
+                setupPushNotifications(user.uid); // Pass user ID to save the token
             } else {
+                // If not logged in as admin, deny access
                 alert("Access Denied. You are not authorized to view this page.");
                 window.location.href = 'index.html';
             }
         });
 
-        function showToast(message) {
-            const toast = document.getElementById('toast-notification');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
+        // --- PUSH NOTIFICATION SETUP ---
+        function setupPushNotifications(userId) {
+            const messaging = firebase.messaging();
 
-        // Renamed and updated function to listen for real-time orders
+            // 1. Request permission from the user
+            messaging.requestPermission()
+                .then(() => {
+                    console.log('Notification permission granted.');
+                    // 2. Get the unique device token
+                    return messaging.getToken();
+                })
+                .then(token => {
+                    if (token) {
+                        console.log('FCM Token:', token);
+                        // 3. Save the token to a specific 'admins' collection in Firestore
+                        // The Cloud Function will look here to find which device to notify
+                        db.collection('admins').doc(userId).set({
+                            fcmToken: token,
+                            email: ownerEmail
+                        }, { merge: true });
+                    } else {
+                        console.warn('No registration token available. Request permission to generate one.');
+                    }
+                })
+                .catch(err => {
+                    console.error('An error occurred while setting up notifications.', err);
+                });
+        }
+        
+        // --- REAL-TIME ORDER LISTENER ---
         function loadAndListenForOrders() {
-            // We use a flag to prevent the sound from playing for all existing orders on initial load
             let isInitialLoad = true;
 
             db.collection("orders").orderBy("date", "desc")
-              .onSnapshot((snapshot) => { // CHANGED .get() to .onSnapshot()
+              .onSnapshot((snapshot) => {
                 
                 if (isInitialLoad && snapshot.empty) {
                      ordersContainer.innerHTML = '<p class="text-center text-gray-500 text-lg">There are no orders to display yet.</p>';
                 }
                 
                 snapshot.docChanges().forEach((change) => {
-                    // Check if a NEW order was added after the initial page load
-                    if (change.type === "added" && !isInitialLoad) {
-                        console.log("New order received!", change.doc.data());
-                        
-                        // Play the sound if the user has interacted with the page
-                        if (canPlaySound) {
-                           notificationSound.play();
-                           showToast("🔔 New Order Received!");
-                        }
-                        
-                        // Add the new order to the top of the list
+                    // When a new order is added
+                    if (change.type === "added") {
                         const orderCard = createOrderCard(change.doc);
-                         // If it's the first order, clear the "no orders" message
-                        if (ordersContainer.querySelector('p')) {
-                            ordersContainer.innerHTML = '';
+                        
+                        // On initial page load, append cards normally
+                        if (isInitialLoad) {
+                             if (ordersContainer.querySelector('p')) {
+                                ordersContainer.innerHTML = ''; // Clear "no orders" message
+                            }
+                            ordersContainer.appendChild(orderCard);
+                        } 
+                        // For new orders arriving in real-time, add to top and show toast
+                        else {
+                            ordersContainer.prepend(orderCard);
+                            showToast("🔔 New Order Received!");
                         }
-                        ordersContainer.prepend(orderCard);
-
-                    } else if (change.type === "added" && isInitialLoad) {
-                        // For initial load, just add the card without sound
-                         // If it's the first order on load, clear the container
-                        if (isInitialLoad && ordersContainer.querySelector('p')) {
-                           ordersContainer.innerHTML = '';
-                        }
-                        const orderCard = createOrderCard(change.doc);
-                        ordersContainer.appendChild(orderCard);
                     }
-                    
-                    // Handle status updates in real-time if needed (optional)
+                    // When an order's status is updated
                     if (change.type === "modified") {
                         console.log("Order updated: ", change.doc.data());
-                        // You could add logic here to highlight the updated order
+                        // Optional: you could find the card and highlight it
                     }
                 });
 
-                // After the first batch of orders is processed, set the flag to false
+                // After the first data load is complete, set flag to false
                 isInitialLoad = false;
 
-
-              }, (error) => { // Error handling for the listener
-                    console.error("Error listening for orders: ", error);
-                    ordersContainer.innerHTML = '<p class="text-center text-red-500 text-lg">Error loading orders.</p>';
+              }, (error) => {
+                  console.error("Error listening for orders: ", error);
+                  ordersContainer.innerHTML = '<p class="text-center text-red-500 text-lg">Error loading orders. Check console for details.</p>';
               });
         }
-        
-        // I've moved the card creation logic into its own function for cleanliness
+
+        // --- DYNAMICALLY CREATE ORDER CARD HTML ---
         function createOrderCard(doc) {
             const order = doc.data();
             const orderCard = document.createElement('div');
             orderCard.className = 'bg-white p-6 rounded-lg shadow-md';
-            orderCard.id = doc.id; // Assign doc id to the card element
+            orderCard.id = doc.id; // Use Firestore doc ID as the element ID
 
             const productsHtml = order.items.map(item => `
                 <div class="flex items-center gap-4 py-3 border-b last:border-b-0">
@@ -197,25 +206,33 @@
             return orderCard;
         }
 
-        // Event listener to handle status changes
+        // --- HANDLE ORDER STATUS UPDATES ---
         ordersContainer.addEventListener('change', (e) => {
             if (e.target.classList.contains('status-select')) {
                 const docId = e.target.dataset.id;
                 const newStatus = e.target.value;
                 
-                db.collection("orders").doc(docId).update({
-                    status: newStatus
-                })
-                .then(() => {
-                    console.log("Order status updated successfully!");
-                    showToast(`Order status updated to ${newStatus}`);
-                })
-                .catch((error) => {
-                    console.error("Error updating status: ", error);
-                    alert("Failed to update status.");
-                });
+                db.collection("orders").doc(docId).update({ status: newStatus })
+                    .then(() => {
+                        console.log("Order status updated successfully!");
+                        showToast(`Order status updated to ${newStatus}`);
+                    })
+                    .catch((error) => {
+                        console.error("Error updating status: ", error);
+                        alert("Failed to update status.");
+                    });
             }
         });
+
+        // --- TOAST NOTIFICATION UTILITY ---
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
     });
 </script>
 </body>
