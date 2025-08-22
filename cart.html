@@ -86,7 +86,7 @@
                     <div class="space-y-3 text-gray-600">
                         <div class="flex justify-between"><span>Subtotal</span><span id="subtotal">₹0.00</span></div>
                         <div class="flex justify-between"><span>Shipping</span><span id="shipping">₹0.00</span></div>
-                        <div class="flex justify-between"><span>Taxes (18%)</span><span id="taxes">₹0.00</span></div>
+                        <div class="flex justify-between"><span>Taxes</span><span id="taxes">₹0.00</span></div>
                     </div>
                     <div class="border-t pt-4 mt-6 flex justify-between font-bold text-xl">
                         <span>Total</span>
@@ -107,7 +107,7 @@
                         </div>
                     </div>
 
-                    <button id="place-order-btn" class="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 rounded-md mt-6 transition duration-300">
+                    <button id="place-order-btn" class="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 rounded-md mt-6 transition duration-300 disabled:opacity-50">
                         Place Order
                     </button>
                     
@@ -128,8 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartContainer = document.getElementById('cart-items-container');
     const cartSummarySection = document.getElementById('cart-summary-section');
     const cartCountElement = document.getElementById('cart-count');
+    const placeOrderBtn = document.getElementById('place-order-btn');
 
-    // --- IMPROVEMENT: Use an in-memory state for the cart to avoid constant localStorage parsing.
     let cartState = JSON.parse(localStorage.getItem('cart')) || [];
 
     const updateCartStorage = () => {
@@ -145,14 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cartState.length === 0) return;
 
         const subtotal = cartState.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        // --- FIX: Correctly apply shipping fee (e.g., ₹100) for orders under ₹2000.
-        const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 100.00; 
-        // --- FIX: Correctly calculate 18% tax.
-        const taxes = subtotal * 0.18; 
+        const shipping = 0; 
+        const taxes = 0;    
         const total = subtotal + shipping + taxes;
 
         document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
-        document.getElementById('shipping').textContent = shipping > 0 ? '₹' + shipping.toFixed(2) : 'Free';
+        document.getElementById('shipping').textContent = '₹' + shipping.toFixed(2);
         document.getElementById('taxes').textContent = '₹' + taxes.toFixed(2);
         document.getElementById('total').textContent = '₹' + total.toFixed(2);
     };
@@ -209,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         updateCartStorage();
-        renderCart(); // Re-render the whole cart after an update
+        renderCart();
     };
 
     cartContainer.addEventListener('click', (event) => {
@@ -230,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (target.classList.contains('quantity-minus')) {
             updateItemInCart(productId, currentQuantity - 1);
         } else if (target.classList.contains('remove-item')) {
-            updateItemInCart(productId, 0); // Setting quantity to 0 removes it
+            updateItemInCart(productId, 0);
         }
     });
 
@@ -242,28 +240,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isNaN(newQuantity) || newQuantity < 1) {
                 newQuantity = 1;
-                event.target.value = 1; // Correct the input field visually
+                event.target.value = 1;
             }
             updateItemInCart(productId, newQuantity);
         }
     });
 
+    // --- NEW: Function to load user's saved address ---
+    const loadUserAddress = async (userId) => {
+        try {
+            const addressDoc = await db.collection("addresses").doc(userId).get();
+            if (addressDoc.exists) {
+                const addressData = addressDoc.data();
+                document.getElementById('full-name').value = addressData.fullName || '';
+                document.getElementById('email').value = addressData.email || '';
+                document.getElementById('phone').value = addressData.phone || '';
+                document.getElementById('address').value = addressData.address || '';
+                document.getElementById('city').value = addressData.city || '';
+                document.getElementById('zip').value = addressData.zip || '';
+            }
+        } catch (error) {
+            console.error("Error fetching user address:", error);
+        }
+    };
+
     const proceedToSuccessPage = (orderNumber) => {
         sessionStorage.setItem('latestOrderNumber', orderNumber);
-        cartState = []; // Clear the in-memory cart
-        updateCartStorage(); // Clear the localStorage cart
+        cartState = [];
+        updateCartStorage();
         window.location.href = 'order-success.html';
     };
 
     const saveOrderToFirestore = async (orderData) => {
         try {
-            const docRef = await db.collection("orders").add(orderData);
-            console.log("Order saved with ID: ", docRef.id);
+            await db.collection("orders").add(orderData);
             return true;
         } catch (error) {
             console.error("Error adding document: ", error);
-            alert('There was an error saving your order. This could be due to a network issue or security rules. Please try again.');
+            alert('There was an error saving your order. Please try again.');
             return false;
+        }
+    };
+    
+    // --- NEW: Function to save the address ---
+    const saveAddress = async (userId, shippingInfo) => {
+        try {
+            await db.collection("addresses").doc(userId).set(shippingInfo, { merge: true });
+        } catch (error) {
+            console.error("Could not save user address:", error);
+            // We don't alert the user here as it's not critical for the order itself.
         }
     };
 
@@ -291,6 +316,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        placeOrderBtn.disabled = true;
+        placeOrderBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Placing Order...`;
+
+        // Gather shipping info from the form
+        const shippingInfo = {
+            fullName: document.getElementById('full-name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            address: document.getElementById('address').value,
+            city: document.getElementById('city').value,
+            zip: document.getElementById('zip').value,
+        };
+        
+        // --- MODIFIED: Save the address before proceeding ---
+        await saveAddress(currentUser.uid, shippingInfo);
+
         const orderNumber = 'VS' + Math.floor(100000 + Math.random() * 900000);
         const orderData = {
             orderNumber,
@@ -298,14 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userId: currentUser.uid,
             userEmail: currentUser.email,
             status: "Placed",
-            shippingInfo: {
-                fullName: document.getElementById('full-name').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                address: document.getElementById('address').value,
-                city: document.getElementById('city').value,
-                zip: document.getElementById('zip').value,
-            },
+            shippingInfo: shippingInfo, // Use the gathered shipping info
             items: cartState,
             summary: {
                 subtotal: document.getElementById('subtotal').textContent,
@@ -319,28 +353,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const success = await saveOrderToFirestore(orderData);
             if (success) {
                 proceedToSuccessPage(orderData.orderNumber);
+            } else {
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.innerHTML = 'Place Order';
             }
         } else if (selectedPaymentMethod.value === 'razorpay') {
-            // --- FIX: Calculate total robustly instead of parsing from DOM text.
             const subtotal = cartState.reduce((sum, item) => sum + item.price * item.quantity, 0);
-            const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 100.00;
-            const taxes = subtotal * 0.18;
-            const totalAmount = subtotal + shipping + taxes;
+            const totalAmount = subtotal; // Since shipping and tax are 0
 
             const options = {
-                "key": "YOUR_RAZORPAY_KEY_ID", // IMPORTANT: Replace with your Razorpay Key ID
-                "amount": Math.round(totalAmount * 100), // Amount in the smallest currency unit (paise)
+                "key": "rzp_live_R5tWTht8fMVe5b", 
+                "amount": Math.round(totalAmount * 100),
                 "currency": "INR",
                 "name": "Vivexa Store",
                 "description": `Order #${orderData.orderNumber}`,
-                "image": "https://example.com/your_logo.jpg",
                 "handler": async function (response) {
-                    // --- IMPROVEMENT: Save order to DB only AFTER successful payment.
                     orderData.paymentId = response.razorpay_payment_id;
                     orderData.status = "Paid";
                     const success = await saveOrderToFirestore(orderData);
                     if (success) {
                         proceedToSuccessPage(orderData.orderNumber);
+                    } else {
+                        placeOrderBtn.disabled = false;
+                        placeOrderBtn.innerHTML = 'Place Order';
                     }
                 },
                 "prefill": {
@@ -353,18 +388,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const rzp1 = new Razorpay(options);
             rzp1.on('payment.failed', function (response) {
                 alert('Payment failed. Error: ' + response.error.description);
-                // The order is NOT saved to Firestore, which is the correct behavior.
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.innerHTML = 'Place Order';
             });
             rzp1.open();
         }
     };
 
-    document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
+    placeOrderBtn.addEventListener('click', handlePlaceOrder);
 
     // Initial render on page load
     renderCart();
+    
+    // --- NEW: Auth state listener to check for logged-in user ---
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // User is logged in, try to load their address
+            loadUserAddress(user.uid);
+        } else {
+            // User is signed out
+            // You could optionally clear the form if someone logs out on the page
+        }
+    });
 });
 </script>
 </body>
-
 </html>
