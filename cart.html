@@ -118,16 +118,11 @@
             </div>
         </div>
     </main>
+    <script src="create-config.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-            const firebaseConfig = {
-      apiKey: "process.meta.env.VITE_FIREBASE_API_KEY",
-      authDomain: "process.meta.env.VITE_FIREBASE_AUTH_KEY",
-      projectId: "process.meta.env.VITE_FIREBASE_PROJECT_KEY",
-      storageBucket: "process.meta.env.VITE_FIREBASE_STORAGE_KEY",
-      messagingSenderId: "process.meta.env.VITE_FIREBASE_SENDER_KEY",
-      appId: "process.meta.env.VITE_FIREBASE_APP_KEY"
-    };
+   
+
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -361,4 +356,5 @@
     });
 </script>
 </body>
+
 </html>
