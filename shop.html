@@ -117,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageTitle = document.getElementById('page-title');
     const breadcrumb = document.getElementById('breadcrumb');
     
-    // Filter Modal Elements
     const filterModal = document.getElementById('filter-modal');
     const filterModalContent = document.getElementById('filter-modal-content');
     const openFilterModalBtn = document.getElementById('open-filter-modal');
@@ -125,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyFiltersBtn = document.getElementById('apply-filters-btn');
     const resetFiltersBtn = document.getElementById('reset-filters-btn');
     
-    // Filter Inputs
     const searchInput = document.getElementById('filter-search-input');
     const sortBySelect = document.getElementById('sort-by');
     const categoryFiltersContainer = document.getElementById('category-filters');
@@ -167,7 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="pt-4 text-left">
                     <h3 class="font-semibold text-md">${p.name}</h3>
-                    <p class="text-gray-800 font-bold text-lg mt-1">₹${p.price.toFixed(2)}</p>
+                    <!-- ERROR FIX: Check if p.price is a number before calling toFixed -->
+                    <p class="text-gray-800 font-bold text-lg mt-1">₹${(typeof p.price === 'number' ? p.price.toFixed(2) : '0.00')}</p>
                 </div>
             </a>`).join('');
     }
@@ -230,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Modal Logic & Event Listeners (no changes needed here)
     function openModal() { filterModal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; setTimeout(() => { filterModalContent.classList.remove('translate-x-full'); }, 10); }
     function closeModal() { filterModalContent.classList.add('translate-x-full'); document.body.style.overflow = ''; setTimeout(() => { filterModal.classList.add('hidden'); }, 300); }
     openFilterModalBtn.addEventListener('click', openModal);
@@ -243,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetFiltersBtn.addEventListener('click', () => { currentFilters = { search: '', color: null, size: null, category: null }; sortBySelect.value = 'default'; populateFilters(); applyFiltersAndSort(); closeModal(); });
     function updateCartCount() { const cart = JSON.parse(localStorage.getItem('cart')) || []; document.getElementById('cart-count').textContent = cart.reduce((sum, item) => sum + item.quantity, 0); }
 
-    // Initial Load
     initializeShop();
 });
 </script>
