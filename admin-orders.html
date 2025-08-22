@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -31,39 +32,45 @@
 
     <main class="container mx-auto p-6 my-10">
         <div id="orders-container" class="space-y-8">
-            </div>
+            <!-- Orders will be loaded here -->
+        </div>
     </main>
     
     <div id="toast-notification" class="toast"></div>
 
+<!-- This file must contain your Firebase config object -->
 <script src="create-config.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const ownerEmail = "vivexatech@gmail.com";
         
-        // Check if firebaseConfig is defined (from create-config.js)
         if (typeof firebaseConfig === 'undefined') {
             console.error("Firebase config is not loaded. Make sure create-config.js is correct.");
             alert("Firebase configuration is missing. The app cannot start.");
             return;
         }
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
         const ordersContainer = document.getElementById('orders-container');
         
+        // --- SOUND NOTIFICATION SETUP (FIXED) ---
+        const notificationSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2c28c3a5a8.mp3'); // Using a reliable sound URL
+        let canPlaySound = false;
+        // Sound can only play after the user clicks anywhere on the page first.
+        document.body.addEventListener('click', () => {
+            canPlaySound = true;
+        }, { once: true }); // This listener runs only once.
+
         // --- AUTHENTICATION CHECK ---
         auth.onAuthStateChanged(user => {
             if (user && user.email === ownerEmail) {
-                // If admin is logged in, load orders and set up notifications
                 loadAndListenForOrders();
-                setupPushNotifications(user.uid); // Pass user ID to save the token
+                setupPushNotifications(user.uid);
             } else {
-                // If not logged in as admin, deny access
                 alert("Access Denied. You are not authorized to view this page.");
                 window.location.href = 'index.html';
             }
@@ -72,33 +79,18 @@
         // --- PUSH NOTIFICATION SETUP ---
         function setupPushNotifications(userId) {
             const messaging = firebase.messaging();
-
-            // 1. Request permission from the user
             messaging.requestPermission()
-                .then(() => {
-                    console.log('Notification permission granted.');
-                    // 2. Get the unique device token
-                    return messaging.getToken();
-                })
+                .then(() => messaging.getToken())
                 .then(token => {
                     if (token) {
                         console.log('FCM Token:', token);
-                        // 3. Save the token to a specific 'admins' collection in Firestore
-                        // The Cloud Function will look here to find which device to notify
-                        db.collection('admins').doc(userId).set({
-                            fcmToken: token,
-                            email: ownerEmail
-                        }, { merge: true });
-                    } else {
-                        console.warn('No registration token available. Request permission to generate one.');
+                        db.collection('admins').doc(userId).set({ fcmToken: token, email: ownerEmail }, { merge: true });
                     }
                 })
-                .catch(err => {
-                    console.error('An error occurred while setting up notifications.', err);
-                });
+                .catch(err => console.error('Notification setup failed.', err));
         }
         
-        // --- REAL-TIME ORDER LISTENER ---
+        // --- REAL-TIME ORDER LISTENER (FIXED) ---
         function loadAndListenForOrders() {
             let isInitialLoad = true;
 
@@ -108,38 +100,43 @@
                 if (isInitialLoad && snapshot.empty) {
                      ordersContainer.innerHTML = '<p class="text-center text-gray-500 text-lg">There are no orders to display yet.</p>';
                 }
+
+                // FIX: Clear the "no orders" message BEFORE the loop starts
+                if (isInitialLoad && !snapshot.empty && ordersContainer.querySelector('p')) {
+                    ordersContainer.innerHTML = '';
+                }
                 
                 snapshot.docChanges().forEach((change) => {
-                    // When a new order is added
                     if (change.type === "added") {
                         const orderCard = createOrderCard(change.doc);
                         
-                        // On initial page load, append cards normally
                         if (isInitialLoad) {
-                             if (ordersContainer.querySelector('p')) {
-                                ordersContainer.innerHTML = ''; // Clear "no orders" message
-                            }
                             ordersContainer.appendChild(orderCard);
-                        } 
-                        // For new orders arriving in real-time, add to top and show toast
-                        else {
+                        } else {
                             ordersContainer.prepend(orderCard);
                             showToast("🔔 New Order Received!");
+                            // FIX: Play sound for new orders if permission is granted
+                            if (canPlaySound) {
+                                notificationSound.play().catch(e => console.error("Sound play failed:", e));
+                            }
                         }
                     }
-                    // When an order's status is updated
                     if (change.type === "modified") {
                         console.log("Order updated: ", change.doc.data());
-                        // Optional: you could find the card and highlight it
+                        // To update in real-time, find the old card and replace it
+                        const updatedCard = createOrderCard(change.doc);
+                        const oldCard = document.getElementById(change.doc.id);
+                        if(oldCard) {
+                            oldCard.replaceWith(updatedCard);
+                        }
                     }
                 });
 
-                // After the first data load is complete, set flag to false
                 isInitialLoad = false;
 
               }, (error) => {
                   console.error("Error listening for orders: ", error);
-                  ordersContainer.innerHTML = '<p class="text-center text-red-500 text-lg">Error loading orders. Check console for details.</p>';
+                  ordersContainer.innerHTML = '<p class="text-center text-red-500 text-lg">Error loading orders.</p>';
               });
         }
 
@@ -148,14 +145,14 @@
             const order = doc.data();
             const orderCard = document.createElement('div');
             orderCard.className = 'bg-white p-6 rounded-lg shadow-md';
-            orderCard.id = doc.id; // Use Firestore doc ID as the element ID
+            orderCard.id = doc.id;
 
             const productsHtml = order.items.map(item => `
                 <div class="flex items-center gap-4 py-3 border-b last:border-b-0">
-                    <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-md">
+                    <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-md" onerror="this.src='https://placehold.co/64x64/e2e8f0/94a3b8?text=Image'">
                     <div>
                         <p class="font-semibold">${item.name}</p>
-                        <p class="text-sm text-gray-600">Size: ${item.size} | Color: ${item.color}</p>
+                        <p class="text-sm text-gray-600">Size: ${item.size || 'N/A'} | Color: ${item.color || 'N/A'}</p>
                         <p class="text-sm text-gray-600">Qty: ${item.quantity} | Price: ₹${parseFloat(item.price).toFixed(2)}</p>
                     </div>
                 </div>
@@ -213,10 +210,7 @@
                 const newStatus = e.target.value;
                 
                 db.collection("orders").doc(docId).update({ status: newStatus })
-                    .then(() => {
-                        console.log("Order status updated successfully!");
-                        showToast(`Order status updated to ${newStatus}`);
-                    })
+                    .then(() => showToast(`Order status updated to ${newStatus}`))
                     .catch((error) => {
                         console.error("Error updating status: ", error);
                         alert("Failed to update status.");
@@ -229,9 +223,7 @@
             const toast = document.getElementById('toast-notification');
             toast.textContent = message;
             toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
     });
 </script>
