@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 echo "const config = {
   firebase: {
     apiKey: '$VITE_FIREBASE_API_KEY',
