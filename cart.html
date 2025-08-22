@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NEW: Function to load user's saved address ---
+    // --- Function to load user's saved address ---
     const loadUserAddress = async (userId) => {
         try {
             const addressDoc = await db.collection("addresses").doc(userId).get();
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- NEW: Function to save the address ---
+    // --- Function to save the address ---
     const saveAddress = async (userId, shippingInfo) => {
         try {
             await db.collection("addresses").doc(userId).set(shippingInfo, { merge: true });
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zip: document.getElementById('zip').value,
         };
         
-        // --- MODIFIED: Save the address before proceeding ---
+        // Save the address for future use before proceeding
         await saveAddress(currentUser.uid, shippingInfo);
 
         const orderNumber = 'VS' + Math.floor(100000 + Math.random() * 900000);
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalAmount = subtotal; // Since shipping and tax are 0
 
             const options = {
-                "key": "rzp_live_R5tWTht8fMVe5b", 
+                "key": "YOUR_RAZORPAY_KEY_ID", // Replace with your actual Razorpay Key ID
                 "amount": Math.round(totalAmount * 100),
                 "currency": "INR",
                 "name": "Vivexa Store",
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial render on page load
     renderCart();
     
-    // --- NEW: Auth state listener to check for logged-in user ---
+    // Auth state listener to check for logged-in user and load address
     auth.onAuthStateChanged((user) => {
         if (user) {
             // User is logged in, try to load their address
