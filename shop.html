@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
         body { font-family: 'Poppins', sans-serif; }
         .filter-modal-overlay { transition: opacity 0.3s ease-in-out; }
@@ -48,6 +51,7 @@
         </div>
 
         <div id="shop-product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-12">
+             <p class="col-span-full text-center">Loading products...</p>
         </div>
     </main>
 
@@ -101,10 +105,14 @@
     </div>
     
     <footer class="bg-black text-white pt-16 pb-8 mt-24">
-        </footer>
+    </footer>
     
+<script src="create-config.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const productGrid = document.getElementById('shop-product-grid');
     const pageTitle = document.getElementById('page-title');
     const breadcrumb = document.getElementById('breadcrumb');
@@ -128,11 +136,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryQuery = params.get('category');
     const searchQueryFromURL = params.get('search');
 
-    let allProducts = JSON.parse(localStorage.getItem('products')) || [];
+    let allProducts = [];
     let currentFilters = { search: searchQueryFromURL || '', color: null, size: null, category: categoryQuery };
 
+    async function initializeShop() {
+        try {
+            const snapshot = await db.collection('products').get();
+            allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            populateFilters();
+            applyFiltersAndSort();
+            updateCartCount();
+
+        } catch (error) {
+            console.error("Error fetching products for shop: ", error);
+            productGrid.innerHTML = '<p class="col-span-full text-center text-red-500">Error loading products. Please try again later.</p>';
+        }
+    }
+
     function renderProducts(productsToRender) {
-        productGrid.innerHTML = ''; // Clear previous results
+        productGrid.innerHTML = '';
         if (productsToRender.length === 0) {
             productGrid.innerHTML = '<p class="text-center col-span-full text-lg text-gray-600">No products found matching your criteria.</p>';
             return;
@@ -140,16 +163,17 @@ document.addEventListener('DOMContentLoaded', () => {
         productGrid.innerHTML = productsToRender.map(p => `
             <a href="product.html?id=${p.id}" class="group">
                 <div class="bg-gray-100 rounded-lg overflow-hidden">
-                    <img src="${(p.images && p.images.length > 0) ? p.images[0] : 'https://placehold.co/600x600/e0e0e0/757575?text=No+Image'}" alt="${p.name}" class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-300">
+                    <img src="${(p.images && p.images.length > 0) ? p.images[0] : 'https://placehold.co/600x600'}" alt="${p.name}" class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-300">
                 </div>
                 <div class="pt-4 text-left">
                     <h3 class="font-semibold text-md">${p.name}</h3>
-                    <p class="text-gray-800 font-bold text-lg mt-1">₹${p.price}</p>
+                    <p class="text-gray-800 font-bold text-lg mt-1">₹${p.price.toFixed(2)}</p>
                 </div>
             </a>`).join('');
     }
 
     function populateFilters() {
+        if (allProducts.length === 0) return;
         const categories = [...new Set(allProducts.map(p => p.category || 'Uncategorized'))];
         const colors = [...new Set(allProducts.flatMap(p => p.colors || []))];
         const sizes = [...new Set(allProducts.flatMap(p => p.sizes || []))];
@@ -186,8 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const sortBy = sortBySelect.value;
-        if (sortBy === 'price-asc') filteredProducts.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-        else if (sortBy === 'price-desc') filteredProducts.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+        if (sortBy === 'price-asc') filteredProducts.sort((a, b) => a.price - b.price);
+        else if (sortBy === 'price-desc') filteredProducts.sort((a, b) => b.price - a.price);
         
         updatePageTitle();
         renderProducts(filteredProducts);
@@ -206,91 +230,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Modal Logic ---
-    function openModal() {
-        filterModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-        setTimeout(() => {
-            filterModal.classList.remove('opacity-0');
-            filterModalContent.classList.remove('translate-x-full');
-        }, 10);
-    }
-
-    function closeModal() {
-        filterModalContent.classList.add('translate-x-full');
-        document.body.style.overflow = '';
-        setTimeout(() => {
-            filterModal.classList.add('hidden');
-        }, 300);
-    }
-    
+    // Modal Logic & Event Listeners (no changes needed here)
+    function openModal() { filterModal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; setTimeout(() => { filterModalContent.classList.remove('translate-x-full'); }, 10); }
+    function closeModal() { filterModalContent.classList.add('translate-x-full'); document.body.style.overflow = ''; setTimeout(() => { filterModal.classList.add('hidden'); }, 300); }
     openFilterModalBtn.addEventListener('click', openModal);
     closeFilterModalBtn.addEventListener('click', closeModal);
     filterModal.addEventListener('click', (e) => { if (e.target === filterModal) closeModal(); });
-    applyFiltersBtn.addEventListener('click', () => {
-        currentFilters.search = searchInput.value.trim();
-        applyFiltersAndSort();
-        closeModal();
-    });
-
-    // --- Filter Event Listeners ---
-    categoryFiltersContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('category-filter-btn')) {
-            const selectedCategory = e.target.dataset.category;
-            document.querySelectorAll('.category-filter-btn').forEach(btn => btn.classList.remove('bg-gray-200', 'font-semibold'));
-            if (currentFilters.category === selectedCategory) {
-                currentFilters.category = null;
-            } else {
-                currentFilters.category = selectedCategory;
-                e.target.classList.add('bg-gray-200', 'font-semibold');
-            }
-        }
-    });
-
-    colorFiltersContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('color-filter-btn')) {
-            const selectedColor = e.target.dataset.color;
-            document.querySelectorAll('.color-filter-btn').forEach(btn => btn.classList.remove('border-black', 'shadow-outline'));
-            if (currentFilters.color === selectedColor) {
-                currentFilters.color = null;
-            } else {
-                currentFilters.color = selectedColor;
-                e.target.classList.add('border-black', 'shadow-outline');
-            }
-        }
-    });
-
-    sizeFiltersContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('size-filter-btn')) {
-             const selectedSize = e.target.dataset.size;
-             document.querySelectorAll('.size-filter-btn').forEach(btn => btn.classList.remove('bg-black', 'text-white', 'border-black'));
-            if (currentFilters.size === selectedSize) {
-                currentFilters.size = null;
-            } else {
-                currentFilters.size = selectedSize;
-                e.target.classList.add('bg-black', 'text-white', 'border-black');
-            }
-        }
-    });
-
-    resetFiltersBtn.addEventListener('click', () => {
-        currentFilters = { search: '', color: null, size: null, category: null };
-        sortBySelect.value = 'default';
-        populateFilters();
-        applyFiltersAndSort();
-        closeModal();
-    });
-
-    function updateCartCount() {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        document.getElementById('cart-count').textContent = totalItems;
-    }
+    applyFiltersBtn.addEventListener('click', () => { currentFilters.search = searchInput.value.trim(); applyFiltersAndSort(); closeModal(); });
+    categoryFiltersContainer.addEventListener('click', (e) => { if (e.target.classList.contains('category-filter-btn')) { const selectedCategory = e.target.dataset.category; document.querySelectorAll('.category-filter-btn').forEach(btn => btn.classList.remove('bg-gray-200', 'font-semibold')); if (currentFilters.category === selectedCategory) { currentFilters.category = null; } else { currentFilters.category = selectedCategory; e.target.classList.add('bg-gray-200', 'font-semibold'); } } });
+    colorFiltersContainer.addEventListener('click', (e) => { if (e.target.classList.contains('color-filter-btn')) { const selectedColor = e.target.dataset.color; document.querySelectorAll('.color-filter-btn').forEach(btn => btn.classList.remove('border-black', 'shadow-outline')); if (currentFilters.color === selectedColor) { currentFilters.color = null; } else { currentFilters.color = selectedColor; e.target.classList.add('border-black', 'shadow-outline'); } } });
+    sizeFiltersContainer.addEventListener('click', (e) => { if (e.target.classList.contains('size-filter-btn')) { const selectedSize = e.target.dataset.size; document.querySelectorAll('.size-filter-btn').forEach(btn => btn.classList.remove('bg-black', 'text-white', 'border-black')); if (currentFilters.size === selectedSize) { currentFilters.size = null; } else { currentFilters.size = selectedSize; e.target.classList.add('bg-black', 'text-white', 'border-black'); } } });
+    resetFiltersBtn.addEventListener('click', () => { currentFilters = { search: '', color: null, size: null, category: null }; sortBySelect.value = 'default'; populateFilters(); applyFiltersAndSort(); closeModal(); });
+    function updateCartCount() { const cart = JSON.parse(localStorage.getItem('cart')) || []; document.getElementById('cart-count').textContent = cart.reduce((sum, item) => sum + item.quantity, 0); }
 
     // Initial Load
-    populateFilters();
-    applyFiltersAndSort();
-    updateCartCount();
+    initializeShop();
 });
 </script>
 </body>
