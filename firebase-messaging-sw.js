@@ -1,11 +1,12 @@
 // firebase-messaging-sw.js
 
-// Import Firebase scripts
+// Import and initialize Firebase
+// Note: You must use 'importScripts' in a service worker
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
-// --- PASTE YOUR FIREBASE CONFIG OBJECT HERE AGAIN ---
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// IMPORTANT: Add your Firebase config object here.
+// It's the same object from your 'create-config.js' file.
 const firebaseConfig = {
   apiKey: "AIzaSyCFUnalA7gBmwYqCXfsRtZugBfDWpT_uQo",
   authDomain: "demoshop-cb486.firebaseapp.com",
@@ -15,19 +16,21 @@ const firebaseConfig = {
   appId: "1:773221651282:web:1ca1e2527ecd584675e08b"
 };
 
+// Initialize the Firebase app in the service worker
 firebase.initializeApp(firebaseConfig);
 
+// Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
-// Handle background notifications
+// Handle incoming messages when the app is in the background.
 messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message: ', payload);
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/images/logo.png' // Optional: path to an icon
+    icon: '/firebase-logo.png' // Optional: Add an icon URL
   };
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
