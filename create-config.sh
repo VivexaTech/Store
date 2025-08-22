@@ -8,7 +8,7 @@ echo "const config = {
     storageBucket: '$VITE_FIREBASE_STORAGE_BUCKET',
     messagingSenderId: '$VITE_FIREBASE_SENDER_ID',
     appId: '$VITE_FIREBASE_APP_ID'
-  },
+  }, 
   cloudinary: {
     cloudName: '$VITE_CLOUDINARY_CLOUD_NAME',
     uploadPreset: '$VITE_CLOUDINARY_UPLOAD_PRESET'
