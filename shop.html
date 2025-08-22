@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop - Vivexa Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .filter-modal-overlay { transition: opacity 0.3s ease-in-out; }
+        .filter-modal-content { transition: transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+    <header class="bg-white sticky top-0 z-40 border-b border-gray-200">
+        <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
+            <a href="ecommerce.html" class="text-2xl font-bold tracking-wider">Vivexa Store</a>
+            <div class="hidden lg:flex items-center space-x-10 text-sm font-medium">
+                <a href="ecommerce.html" class="text-gray-500 hover:text-black">Home</a>
+                <a href="shop.html" class="text-black">Shop</a>
+                <a href="account.html" class="text-gray-500 hover:text-black">My Account</a>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="cart.html" class="relative text-gray-600 hover:text-black transition duration-300">
+                    <i class="fas fa-shopping-bag fa-lg"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-black text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 my-16">
+        <div class="mb-8 text-left">
+            <h1 id="page-title" class="text-4xl font-extrabold tracking-tight capitalize">Shop</h1>
+            <p id="breadcrumb" class="text-gray-500 mt-1">Home / Shop</p>
+        </div>
+        
+        <div class="mb-8 flex justify-between items-center">
+            <button id="open-filter-modal" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-5 rounded-md transition duration-300 flex items-center gap-2">
+                <i class="fas fa-filter"></i>
+                <span>Filter & Sort</span>
+            </button>
+        </div>
+
+        <div id="shop-product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-12">
+        </div>
+    </main>
+
+    <div id="filter-modal" class="filter-modal-overlay fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div id="filter-modal-content" class="filter-modal-content absolute top-0 right-0 h-full w-full max-w-sm bg-white shadow-xl transform translate-x-full overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <h2 class="text-xl font-bold">Filter & Sort</h2>
+                    <button id="close-filter-modal" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+                
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="font-semibold mb-4 text-md">Search by Name</h3>
+                         <div class="relative">
+                            <input type="text" id="filter-search-input" placeholder="Search products..." class="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-black focus:border-black text-sm">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold mb-4 text-md">Sort By</h3>
+                        <select id="sort-by" class="w-full p-3 border border-gray-300 rounded-md focus:ring-black focus:border-black text-sm">
+                            <option value="default">Default Sorting</option>
+                            <option value="price-asc">Price: Low to High</option>
+                            <option value="price-desc">Price: High to Low</option>
+                        </select>
+                    </div>
+                    
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold mb-4 text-md">Category</h3>
+                        <div id="category-filters" class="space-y-2"></div>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold mb-4 text-md">Colors</h3>
+                        <div id="color-filters" class="flex flex-wrap gap-3"></div>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold mb-4 text-md">Size</h3>
+                        <div id="size-filters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-white p-4 border-t w-full flex gap-4">
+                 <button id="apply-filters-btn" class="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 transition-colors font-semibold text-sm">Apply</button>
+                 <button id="reset-filters-btn" class="w-full bg-gray-200 text-gray-800 py-3 rounded-md hover:bg-gray-300 transition-colors font-semibold text-sm">Clear All</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="bg-black text-white pt-16 pb-8 mt-24">
+        </footer>
+    
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const productGrid = document.getElementById('shop-product-grid');
+    const pageTitle = document.getElementById('page-title');
+    const breadcrumb = document.getElementById('breadcrumb');
+    
+    // Filter Modal Elements
+    const filterModal = document.getElementById('filter-modal');
+    const filterModalContent = document.getElementById('filter-modal-content');
+    const openFilterModalBtn = document.getElementById('open-filter-modal');
+    const closeFilterModalBtn = document.getElementById('close-filter-modal');
+    const applyFiltersBtn = document.getElementById('apply-filters-btn');
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    
+    // Filter Inputs
+    const searchInput = document.getElementById('filter-search-input');
+    const sortBySelect = document.getElementById('sort-by');
+    const categoryFiltersContainer = document.getElementById('category-filters');
+    const colorFiltersContainer = document.getElementById('color-filters');
+    const sizeFiltersContainer = document.getElementById('size-filters');
+
+    const params = new URLSearchParams(window.location.search);
+    const categoryQuery = params.get('category');
+    const searchQueryFromURL = params.get('search');
+
+    let allProducts = JSON.parse(localStorage.getItem('products')) || [];
+    let currentFilters = { search: searchQueryFromURL || '', color: null, size: null, category: categoryQuery };
+
+    function renderProducts(productsToRender) {
+        productGrid.innerHTML = ''; // Clear previous results
+        if (productsToRender.length === 0) {
+            productGrid.innerHTML = '<p class="text-center col-span-full text-lg text-gray-600">No products found matching your criteria.</p>';
+            return;
+        }
+        productGrid.innerHTML = productsToRender.map(p => `
+            <a href="product.html?id=${p.id}" class="group">
+                <div class="bg-gray-100 rounded-lg overflow-hidden">
+                    <img src="${(p.images && p.images.length > 0) ? p.images[0] : 'https://placehold.co/600x600/e0e0e0/757575?text=No+Image'}" alt="${p.name}" class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-300">
+                </div>
+                <div class="pt-4 text-left">
+                    <h3 class="font-semibold text-md">${p.name}</h3>
+                    <p class="text-gray-800 font-bold text-lg mt-1">₹${p.price}</p>
+                </div>
+            </a>`).join('');
+    }
+
+    function populateFilters() {
+        const categories = [...new Set(allProducts.map(p => p.category || 'Uncategorized'))];
+        const colors = [...new Set(allProducts.flatMap(p => p.colors || []))];
+        const sizes = [...new Set(allProducts.flatMap(p => p.sizes || []))];
+
+        categoryFiltersContainer.innerHTML = categories.map(cat => `
+            <button class="category-filter-btn w-full text-left p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors ${currentFilters.category === cat ? 'bg-gray-200 font-semibold' : ''}" data-category="${cat}">${cat}</button>
+        `).join('');
+
+        colorFiltersContainer.innerHTML = colors.map(color => `
+            <button class="color-filter-btn border-2 rounded-full w-7 h-7 transition-shadow duration-200 ${currentFilters.color === color ? 'border-black shadow-outline' : 'border-gray-300'}" style="background-color: ${color.toLowerCase()};" title="${color}" data-color="${color}"></button>
+        `).join('');
+
+        sizeFiltersContainer.innerHTML = sizes.map(size => `
+            <button class="size-filter-btn border rounded-md px-3 py-1.5 text-xs transition-colors ${currentFilters.size === size ? 'bg-black text-white border-black' : 'border-gray-300 hover:bg-black hover:text-white'}" data-size="${size}">${size}</button>
+        `).join('');
+        
+        searchInput.value = currentFilters.search;
+    }
+    
+    function applyFiltersAndSort() {
+        let filteredProducts = [...allProducts];
+
+        if (currentFilters.search) {
+            filteredProducts = filteredProducts.filter(p => p.name.toLowerCase().includes(currentFilters.search.toLowerCase()));
+        }
+        if (currentFilters.category) {
+            filteredProducts = filteredProducts.filter(p => p.category === currentFilters.category);
+        }
+        if (currentFilters.color) {
+            filteredProducts = filteredProducts.filter(p => p.colors && p.colors.includes(currentFilters.color));
+        }
+        if (currentFilters.size) {
+            filteredProducts = filteredProducts.filter(p => p.sizes && p.sizes.includes(currentFilters.size));
+        }
+        
+        const sortBy = sortBySelect.value;
+        if (sortBy === 'price-asc') filteredProducts.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        else if (sortBy === 'price-desc') filteredProducts.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+        
+        updatePageTitle();
+        renderProducts(filteredProducts);
+    }
+    
+    function updatePageTitle() {
+        if (currentFilters.search) {
+            pageTitle.innerHTML = `Search results for "<span class="text-black">${currentFilters.search}</span>"`;
+            breadcrumb.innerHTML = `Home / Search`;
+        } else if (currentFilters.category) {
+            pageTitle.textContent = currentFilters.category;
+            breadcrumb.innerHTML = `Home / Shop / <span class="text-black">${currentFilters.category}</span>`;
+        } else {
+             pageTitle.textContent = 'All Products';
+             breadcrumb.innerHTML = 'Home / Shop';
+        }
+    }
+
+    // --- Modal Logic ---
+    function openModal() {
+        filterModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+            filterModal.classList.remove('opacity-0');
+            filterModalContent.classList.remove('translate-x-full');
+        }, 10);
+    }
+
+    function closeModal() {
+        filterModalContent.classList.add('translate-x-full');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+            filterModal.classList.add('hidden');
+        }, 300);
+    }
+    
+    openFilterModalBtn.addEventListener('click', openModal);
+    closeFilterModalBtn.addEventListener('click', closeModal);
+    filterModal.addEventListener('click', (e) => { if (e.target === filterModal) closeModal(); });
+    applyFiltersBtn.addEventListener('click', () => {
+        currentFilters.search = searchInput.value.trim();
+        applyFiltersAndSort();
+        closeModal();
+    });
+
+    // --- Filter Event Listeners ---
+    categoryFiltersContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('category-filter-btn')) {
+            const selectedCategory = e.target.dataset.category;
+            document.querySelectorAll('.category-filter-btn').forEach(btn => btn.classList.remove('bg-gray-200', 'font-semibold'));
+            if (currentFilters.category === selectedCategory) {
+                currentFilters.category = null;
+            } else {
+                currentFilters.category = selectedCategory;
+                e.target.classList.add('bg-gray-200', 'font-semibold');
+            }
+        }
+    });
+
+    colorFiltersContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('color-filter-btn')) {
+            const selectedColor = e.target.dataset.color;
+            document.querySelectorAll('.color-filter-btn').forEach(btn => btn.classList.remove('border-black', 'shadow-outline'));
+            if (currentFilters.color === selectedColor) {
+                currentFilters.color = null;
+            } else {
+                currentFilters.color = selectedColor;
+                e.target.classList.add('border-black', 'shadow-outline');
+            }
+        }
+    });
+
+    sizeFiltersContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('size-filter-btn')) {
+             const selectedSize = e.target.dataset.size;
+             document.querySelectorAll('.size-filter-btn').forEach(btn => btn.classList.remove('bg-black', 'text-white', 'border-black'));
+            if (currentFilters.size === selectedSize) {
+                currentFilters.size = null;
+            } else {
+                currentFilters.size = selectedSize;
+                e.target.classList.add('bg-black', 'text-white', 'border-black');
+            }
+        }
+    });
+
+    resetFiltersBtn.addEventListener('click', () => {
+        currentFilters = { search: '', color: null, size: null, category: null };
+        sortBySelect.value = 'default';
+        populateFilters();
+        applyFiltersAndSort();
+        closeModal();
+    });
+
+    function updateCartCount() {
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        document.getElementById('cart-count').textContent = totalItems;
+    }
+
+    // Initial Load
+    populateFilters();
+    applyFiltersAndSort();
+    updateCartCount();
+});
+</script>
+</body>
+</html>
