@@ -26,9 +26,9 @@
 
     <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200">
         <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
-            <a href="ecommerce.html" class="text-2xl font-bold tracking-wider">Vivexa Store</a>
+            <a href="index.html" class="text-2xl font-bold tracking-wider">Vivexa Store</a>
             <div class="hidden lg:flex items-center space-x-10 text-sm font-medium">
-                <a href="ecommerce.html" class="text-gray-500 hover:text-black">Home</a>
+                <a href="index.html" class="text-gray-500 hover:text-black">Home</a>
                 <a href="shop.html" class="text-gray-500 hover:text-black">Shop</a>
                 <a href="account.html" class="text-gray-500 hover:text-black">My Account</a>
             </div>
@@ -120,14 +120,14 @@
     </main>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const firebaseConfig = {
-          apiKey: "AIzaSyCFUnalA7gBmwYqCXfsRtZugBfDWpT_uQo",
-          authDomain: "demoshop-cb486.firebaseapp.com",
-          projectId: "demoshop-cb486",
-          storageBucket: "demoshop-cb486.firebasestorage.app",
-          messagingSenderId: "773221651282",
-          appId: "1:773221651282:web:1ca1e2527ecd584675e08b"
-        };
+            const firebaseConfig = {
+      apiKey: "process.meta.env.VITE_FIREBASE_API_KEY",
+      authDomain: "process.meta.env.VITE_FIREBASE_AUTH_KEY",
+      projectId: "process.meta.env.VITE_FIREBASE_PROJECT_KEY",
+      storageBucket: "process.meta.env.VITE_FIREBASE_STORAGE_KEY",
+      messagingSenderId: "process.meta.env.VITE_FIREBASE_SENDER_KEY",
+      appId: "process.meta.env.VITE_FIREBASE_APP_KEY"
+    };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();

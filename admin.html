@@ -29,7 +29,7 @@
                     Check Orders
                     <span id="order-notification" class="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden"></span>
                 </a>
-                <a href="ecommerce.html" class="text-indigo-600 hover:underline font-semibold">View Site</a>
+                <a href="index.html" class="text-indigo-600 hover:underline font-semibold">View Site</a>
                 <button id="logout-btn" class="ml-6 text-red-600 hover:underline font-semibold">Logout</button>
             </div>
         </nav>
@@ -127,12 +127,12 @@
     
     // **PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE**
     const firebaseConfig = {
-      apiKey: "AIzaSyCFUnalA7gBmwYqCXfsRtZugBfDWpT_uQo",
-      authDomain: "demoshop-cb486.firebaseapp.com",
-      projectId: "demoshop-cb486",
-      storageBucket: "demoshop-cb486.firebasestorage.app",
-      messagingSenderId: "773221651282",
-      appId: "1:773221651282:web:1ca1e2527ecd584675e08b"
+      apiKey: "process.meta.env.VITE_FIREBASE_API_KEY",
+      authDomain: "process.meta.env.VITE_FIREBASE_AUTH_KEY",
+      projectId: "process.meta.env.VITE_FIREBASE_PROJECT_KEY",
+      storageBucket: "process.meta.env.VITE_FIREBASE_STORAGE_KEY",
+      messagingSenderId: "process.meta.env.VITE_FIREBASE_SENDER_KEY",
+      appId: "process.meta.env.VITE_FIREBASE_APP_KEY"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -146,13 +146,13 @@
             if (!user || user.email !== ownerEmail) {
                 alert("Access Denied. You are not authorized to view this page.");
                 // Redirect them to the homepage
-                window.location.href = 'ecommerce.html';
+                window.location.href = 'index.html';
             }
         });
 
         document.getElementById('logout-btn').addEventListener('click', () => {
             auth.signOut().then(() => {
-                window.location.href = 'ecommerce.html';
+                window.location.href = 'index.html';
             });
         });
 
