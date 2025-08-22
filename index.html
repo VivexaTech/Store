@@ -237,20 +237,12 @@
              <p class="mt-6 text-center text-sm">Already have an account? <a href="#" id="show-login-modal" class="font-medium text-black hover:underline">Login</a></p>
         </div>
     </div>
-    
+    <script src="config.js"></script>
 <script>
     // --- CONFIGURATION ---
     const ownerEmail = "vivexatech@gmail.com"; 
 
-    // --- FIREBASE SETUP ---
-    const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, // AUTH_KEY की जगह AUTH_DOMAIN होना चाहिए
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID, // PROJECT_KEY की जगह PROJECT_ID होना चाहिए
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, // STORAGE_KEY की जगह STORAGE_BUCKET होना चाहिए
-  messagingSenderId: import.meta.env.VITE_FIREBASE_SENDER_ID, // SENDER_KEY की जगह SENDER_ID होना चाहिए
-  appId: import.meta.env.VITE_FIREBASE_APP_ID // APP_KEY की जगह APP_ID होना चाहिए
-};
+    // --- FIREBASE SETUP --
 
 firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -426,3 +418,4 @@ firebase.initializeApp(firebaseConfig);
 </body>
 
 </html>
+
