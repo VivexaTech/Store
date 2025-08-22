@@ -17,6 +17,7 @@
         .toast.show { transform: translateY(0); }
         .modal-overlay { transition: opacity 0.3s ease-in-out; }
         .modal-content, .search-modal-content { transition: all 0.3s ease-in-out; }
+        /* Hero Slider Styles */
         #hero-slider { position: relative; height: 90vh; overflow: hidden; }
         .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1s ease-in-out; background-size: cover; background-position: center; }
         .slide.active { opacity: 1; }
@@ -117,7 +118,7 @@
                     <p class="text-gray-500 mt-3 max-w-xl mx-auto">Explore our curated collection of must-have items that are defining the trends of the season.</p>
                 </div>
                 <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
-                </div>
+                    </div>
                  <div class="text-center mt-20">
                     <a href="shop.html" class="bg-black hover:bg-gray-800 text-white font-bold py-3 px-10 rounded-md transition duration-300 inline-block text-lg">View All Products</a>
                 </div>
@@ -138,7 +139,7 @@
                             <span id="deal-old-price" class="text-2xl text-gray-400 line-through">₹0.00</span>
                         </div>
                         <p class="text-gray-600 mb-8 max-w-lg mx-auto lg:mx-0">Don't miss out on this exclusive offer. A perfect blend of style and craftsmanship, available at an unbeatable price for a limited time.</p>
-                        <a href="product.html?id=2" class="bg-black hover:bg-gray-800 text-white font-bold py-3 px-10 rounded-md transition duration-300 inline-block text-lg">Shop The Deal</a>
+                        <a href="file:///C:/Users/admin/Desktop/ecom%20-%20Copy/product.html?id=2" class="bg-black hover:bg-gray-800 text-white font-bold py-3 px-10 rounded-md transition duration-300 inline-block text-lg">Shop The Deal</a>
                     </div>
                 </div>
             </div>
@@ -236,17 +237,15 @@
              <p class="mt-6 text-center text-sm">Already have an account? <a href="#" id="show-login-modal" class="font-medium text-black hover:underline">Login</a></p>
         </div>
     </div>
-    
-<script src="config.js"></script>
+    <script src="create-config.js"></script>
 <script>
     // --- CONFIGURATION ---
     const ownerEmail = "vivexatech@gmail.com"; 
 
-    // --- FIREBASE SETUP ---
-    // CHANGE 2: Firebase initialization now uses 'config.firebase' from config.js
-    firebase.initializeApp(config.firebase);
+
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    
+
     document.addEventListener('DOMContentLoaded', () => {
         
         // --- INITIALIZE DATA ---
