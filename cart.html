@@ -142,8 +142,8 @@
             if (cart.length === 0) return;
 
             const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-            const shipping = subtotal > 2000 ? 0 : (subtotal > 0 ? 100.00 : 0); // Free shipping over 2000
-            const taxes = subtotal * 0.18;
+            const shipping = subtotal > 2000 ? 0 : (subtotal > 0 ? 00.00 : 0); // Free shipping over 2000
+            const taxes = subtotal * 0.0;
             const total = subtotal + shipping + taxes;
 
             document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
@@ -358,3 +358,4 @@
 </body>
 
 </html>
+
