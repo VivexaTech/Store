@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# This script creates the config.js file using Vercel's Environment Variables.
 
 echo "const config = {
   firebase: {
