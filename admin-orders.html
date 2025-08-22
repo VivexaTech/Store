@@ -77,18 +77,23 @@
         });
 
         // --- PUSH NOTIFICATION SETUP ---
-        function setupPushNotifications(userId) {
-            const messaging = firebase.messaging();
-            messaging.requestPermission()
-                .then(() => messaging.getToken())
-                .then(token => {
-                    if (token) {
-                        console.log('FCM Token:', token);
-                        db.collection('admins').doc(userId).set({ fcmToken: token, email: ownerEmail }, { merge: true });
-                    }
-                })
-                .catch(err => console.error('Notification setup failed.', err));
-        }
+        // In your manage orders HTML file
+
+function setupPushNotifications(userId) {
+    const messaging = firebase.messaging();
+    // The VAPID key you copied from the Firebase console
+    const vapidKey = 'YOUR_GENERATED_VAPID_KEY_PASTE_IT_HERE';
+
+    messaging.requestPermission()
+        .then(() => messaging.getToken({ vapidKey: vapidKey })) // <-- CHANGE IS HERE
+        .then(token => {
+            if (token) {
+                console.log('FCM Token:', token);
+                db.collection('admins').doc(userId).set({ fcmToken: token, email: ownerEmail }, { merge: true });
+            }
+        })
+        .catch(err => console.error('Notification setup failed.', err));
+}
         
         // --- REAL-TIME ORDER LISTENER (FIXED) ---
         function loadAndListenForOrders() {
@@ -229,3 +234,4 @@
 </script>
 </body>
 </html>
+
