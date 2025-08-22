@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Orders - Vivexa Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background-color: #22c55e; color: white; padding: 0.75rem 1.25rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); opacity: 0; transform: translateY(20px); transition: all 0.3s ease-in-out; z-index: 1000; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <header class="bg-white shadow-md">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Manage Orders</h1>
+            <div>
+                <a href="admin.html" class="text-indigo-600 hover:underline font-semibold">Back to Dashboard</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-6 my-10">
+        <div id="orders-container" class="space-y-8">
+            </div>
+    </main>
+    
+    <div id="toast-notification" class="toast"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const ownerEmail = "vivexatech@gmail.com";
+        // --- PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCFUnalA7gBmwYqCXfsRtZugBfDWpT_uQo",
+          authDomain: "demoshop-cb486.firebaseapp.com",
+          projectId: "demoshop-cb486",
+          storageBucket: "demoshop-cb486.firebasestorage.app",
+          messagingSenderId: "773221651282",
+          appId: "1:773221651282:web:1ca1e2527ecd584675e08b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const ordersContainer = document.getElementById('orders-container');
+
+        auth.onAuthStateChanged(user => {
+            if (user && user.email === ownerEmail) {
+                loadOrders();
+            } else {
+                alert("Access Denied. You are not authorized to view this page.");
+                window.location.href = 'ecommerce.html';
+            }
+        });
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function loadOrders() {
+            db.collection("orders").orderBy("date", "desc").get().then((querySnapshot) => {
+                ordersContainer.innerHTML = '';
+                if (querySnapshot.empty) {
+                    ordersContainer.innerHTML = '<p class="text-center text-gray-500 text-lg">There are no orders to display yet.</p>';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const order = doc.data();
+                    const orderCard = document.createElement('div');
+                    orderCard.className = 'bg-white p-6 rounded-lg shadow-md';
+                    
+                    const productsHtml = order.items.map(item => `
+                        <div class="flex items-center gap-4 py-3 border-b last:border-b-0">
+                            <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-md">
+                            <div>
+                                <p class="font-semibold">${item.name}</p>
+                                <p class="text-sm text-gray-600">Size: ${item.size} | Color: ${item.color}</p>
+                                <p class="text-sm text-gray-600">Qty: ${item.quantity} | Price: ₹${parseFloat(item.price).toFixed(2)}</p>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    // Define status options and create the dropdown
+                    const statusOptions = ["Placed", "Shipped", "Out for Delivery", "Delivered", "Cancelled"];
+                    const statusDropdown = `
+                        <select class="status-select mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" data-id="${doc.id}">
+                            ${statusOptions.map(status => `<option value="${status}" ${order.status === status ? 'selected' : ''}>${status}</option>`).join('')}
+                        </select>
+                    `;
+
+                    orderCard.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 border-b pb-4 mb-4">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase">Order Number</h3>
+                                <p class="text-lg font-bold text-indigo-600">${order.orderNumber}</p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase">Order Date</h3>
+                                <p class="text-lg font-bold">${new Date(order.date).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase">Total Amount</h3>
+                                <p class="text-lg font-bold text-gray-800">${order.summary.total}</p>
+                            </div>
+                             <div>
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase">Update Status</h3>
+                                ${statusDropdown}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-xl font-bold mb-4 border-b pb-2">Customer Details</h3>
+                                <div class="space-y-2 text-gray-700">
+                                    <p><strong>Name:</strong> ${order.shippingInfo.fullName}</p>
+                                    <p><strong>Email:</strong> ${order.shippingInfo.email}</p>
+                                    <p><strong>Phone:</strong> ${order.shippingInfo.phone}</p>
+                                    <p><strong>Address:</strong> ${order.shippingInfo.address}, ${order.shippingInfo.city}, ${order.shippingInfo.zip}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold mb-4 border-b pb-2">Ordered Products</h3>
+                                <div class="space-y-2">${productsHtml}</div>
+                            </div>
+                        </div>
+                    `;
+                    ordersContainer.appendChild(orderCard);
+                });
+            }).catch((error) => {
+                console.error("Error getting documents: ", error);
+                ordersContainer.innerHTML = '<p class="text-center text-red-500 text-lg">Error loading orders.</p>';
+            });
+
+            localStorage.setItem('lastCheckedOrderTimestamp', new Date().toISOString());
+        }
+
+        // Event listener to handle status changes
+        ordersContainer.addEventListener('change', (e) => {
+            if (e.target.classList.contains('status-select')) {
+                const docId = e.target.dataset.id;
+                const newStatus = e.target.value;
+                
+                db.collection("orders").doc(docId).update({
+                    status: newStatus
+                })
+                .then(() => {
+                    console.log("Order status updated successfully!");
+                    showToast(`Order status updated to ${newStatus}`);
+                })
+                .catch((error) => {
+                    console.error("Error updating status: ", error);
+                    alert("Failed to update status.");
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

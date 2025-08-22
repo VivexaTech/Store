@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vivexa Store - Modern Fashion & Electronics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background-color: #111827; color: white; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transform: translateY(200%); transition: transform 0.5s ease-in-out; z-index: 1000; }
+        .toast.show { transform: translateY(0); }
+        .modal-overlay { transition: opacity 0.3s ease-in-out; }
+        .modal-content, .search-modal-content { transition: all 0.3s ease-in-out; }
+        /* Hero Slider Styles */
+        #hero-slider { position: relative; height: 90vh; overflow: hidden; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1s ease-in-out; background-size: cover; background-position: center; }
+        .slide.active { opacity: 1; }
+        .slider-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 20; background-color: rgba(255, 255, 255, 0.5); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.3s; }
+        .slider-arrow:hover { background-color: rgba(255, 255, 255, 0.8); }
+        #prev-slide { left: 2rem; }
+        #next-slide { right: 2rem; }
+        .slider-dots { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 0.75rem; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.5); cursor: pointer; transition: background-color 0.3s; }
+        .dot.active { background-color: white; }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200">
+        <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
+            <a href="ecommerce.html" class="text-2xl font-bold tracking-wider">Vivexa Store</a>
+            <div class="hidden lg:flex items-center space-x-10 text-sm font-medium">
+                <a href="ecommerce.html" class="text-black">Home</a>
+                <a href="shop.html" class="text-gray-500 hover:text-black">Shop</a>
+                <a href="account.html" class="text-gray-500 hover:text-black">My Account</a>
+                <a href="admin.html" id="admin-link" class="text-gray-500 hover:text-black transition duration-300 hidden">Admin</a>
+            </div>
+            <div class="flex items-center space-x-6">
+                <button id="search-button" class="text-gray-600 hover:text-black transition duration-300"><i class="fas fa-search fa-lg"></i></button>
+                <div id="auth-container" class="flex items-center space-x-3">
+                    <span id="user-info" class="text-sm text-gray-600 hidden"></span>
+                    <button id="auth-button" class="text-gray-600 hover:text-black transition duration-300"><i class="fas fa-user fa-lg"></i></button>
+                </div>
+                <a href="cart.html" class="relative text-gray-600 hover:text-black transition duration-300">
+                    <i class="fas fa-shopping-bag fa-lg"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-black text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="hero-slider"></section>
+
+        <section class="py-24">
+            <div class="container mx-auto px-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+                    <div class="flex flex-col items-center">
+                        <div class="text-gray-800 mb-4 p-5 bg-gray-100 rounded-full"><i class="fas fa-shipping-fast fa-2x"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">Free Shipping</h3>
+                        <p class="text-gray-500">On all orders over ₹2000. Fast and reliable delivery right to your doorstep.</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="text-gray-800 mb-4 p-5 bg-gray-100 rounded-full"><i class="fas fa-medal fa-2x"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">Premium Quality</h3>
+                        <p class="text-gray-500">Sourced from the best materials for lasting quality and timeless style.</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                         <div class="text-gray-800 mb-4 p-5 bg-gray-100 rounded-full"><i class="fas fa-headset fa-2x"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">24/7 Support</h3>
+                        <p class="text-gray-500">Our dedicated support team is here to help you anytime, anywhere.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <a href="shop.html?category=Womens" class="relative rounded-lg overflow-hidden h-96 group col-span-1 md:col-span-1">
+                        <img src="https://images.unsplash.com/photo-1572804013427-4d7ca7268217?q=80&w=1965&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Women's Collection">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <h3 class="text-white text-3xl font-bold tracking-wider">WOMEN</h3>
+                        </div>
+                    </a>
+                    <a href="shop.html?category=Mens" class="relative rounded-lg overflow-hidden h-96 group col-span-1 md:col-span-1">
+                        <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1887&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Men's Collection">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <h3 class="text-white text-3xl font-bold tracking-wider">MEN</h3>
+                        </div>
+                    </a>
+                    <a href="shop.html?category=Accessories" class="relative rounded-lg overflow-hidden h-96 group col-span-1 md:col-span-2 lg:col-span-1">
+                        <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1999&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Accessories Collection">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <h3 class="text-white text-3xl font-bold tracking-wider">ACCESSORIES</h3>
+                        </div>
+                    </a>
+                    <a href="shop.html?category=Electronics" class="relative rounded-lg overflow-hidden h-96 group col-span-1 md:col-span-2 lg:col-span-1">
+                        <img src="https://media.istockphoto.com/id/171276224/photo/electronics-shopping.jpg?s=612x612&w=0&k=20&c=mcOOmz2ZaakBmL1XHUNG-ymiNCgjGlODAp5jB6HFoj0=" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Electronics Collection">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <h3 class="text-white text-3xl font-bold tracking-wider">ELECTRONICS</h3>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="featured-products" class="py-24 bg-gray-50">
+             <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-extrabold tracking-tight">This Season's Picks</h2>
+                    <p class="text-gray-500 mt-3 max-w-xl mx-auto">Explore our curated collection of must-have items that are defining the trends of the season.</p>
+                </div>
+                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+                    </div>
+                 <div class="text-center mt-20">
+                    <a href="shop.html" class="bg-black hover:bg-gray-800 text-white font-bold py-3 px-10 rounded-md transition duration-300 inline-block text-lg">View All Products</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-24 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="flex flex-col lg:flex-row items-center gap-12">
+                    <div class="lg:w-1/2">
+                        <img id="deal-image" src="https://placehold.co/600x600/ffffff/4f46e5?text=Deal" alt="Deal of the Day" class="rounded-lg shadow-xl w-full">
+                    </div>
+                    <div class="lg:w-1/2 text-center lg:text-left">
+                        <p class="text-sm uppercase font-semibold text-gray-500 tracking-widest">LIMITED TIME OFFER</p>
+                        <h2 id="deal-name" class="text-4xl md:text-5xl font-extrabold my-4">Deal of the Day</h2>
+                        <div class="flex items-center justify-center lg:justify-start gap-4 mb-6">
+                            <span id="deal-new-price" class="text-4xl font-bold text-black">₹0.00</span>
+                            <span id="deal-old-price" class="text-2xl text-gray-400 line-through">₹0.00</span>
+                        </div>
+                        <p class="text-gray-600 mb-8 max-w-lg mx-auto lg:mx-0">Don't miss out on this exclusive offer. A perfect blend of style and craftsmanship, available at an unbeatable price for a limited time.</p>
+                        <a href="file:///C:/Users/admin/Desktop/ecom%20-%20Copy/product.html?id=2" class="bg-black hover:bg-gray-800 text-white font-bold py-3 px-10 rounded-md transition duration-300 inline-block text-lg">Shop The Deal</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="py-20 bg-gray-100">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="text-3xl font-bold mb-2">Join Our Newsletter</h2>
+                <p class="text-gray-600 mb-8">Get the latest updates on new products and upcoming sales.</p>
+                <form class="max-w-md mx-auto flex">
+                    <input type="email" placeholder="Enter your email" class="w-full p-4 border border-r-0 border-gray-300 rounded-l-md focus:ring-black focus:border-black" required>
+                    <button type="submit" class="bg-black text-white px-8 py-4 rounded-r-md hover:bg-gray-800 font-semibold">Subscribe</button>
+                </form>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-black text-white pt-20 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10 text-sm">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Vivexa Store</h3>
+                    <p class="text-gray-400">Discover fashion that tells your story. High-quality, modern, and timeless pieces for your wardrobe.</p>
+                     <div class="flex space-x-4 mt-6">
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-facebook-f fa-lg"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-white mb-4 tracking-wider uppercase">Shop</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="shop.html?category=Womens" class="hover:text-white transition-colors">Women</a></li>
+                        <li><a href="shop.html?category=Mens" class="hover:text-white transition-colors">Men</a></li>
+                        <li><a href="shop.html?category=Accessories" class="hover:text-white transition-colors">Accessories</a></li>
+                        <li><a href="shop.html?category=Electronics" class="hover:text-white transition-colors">Electronics</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-white mb-4 tracking-wider uppercase">Company</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">About Us</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Careers</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms & Conditions</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-white mb-4 tracking-wider uppercase">Help</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Customer Support</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Delivery Details</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Returns</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Contact Us</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 mt-8 text-center text-gray-500 text-xs">
+                <p>&copy; 2025 Vivexa Store. All Rights Reserved. Designed with passion.</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <div id="toast" class="toast"></div>
+    <div id="search-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 flex items-start justify-center p-4 z-[100] hidden">
+        <div class="search-modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl mt-16 transform scale-95 opacity-0">
+            <div class="p-2">
+                <form id="search-form" class="flex items-center">
+                    <input type="text" id="search-input" placeholder="Search for products..." class="w-full p-4 border-0 focus:ring-0 text-lg" autofocus>
+                    <button type="submit" class="bg-black text-white px-6 py-4 rounded-r-md hover:bg-gray-800"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="login-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-8 transform scale-95 opacity-0">
+            <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Login</h2><button id="close-login-modal" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div>
+            <form id="login-form">
+                <div class="mb-4"><label for="login-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 p-3 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black"></div>
+                <div class="mb-6"><label for="login-password" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="login-password" required class="mt-1 p-3 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black"></div>
+                <button type="submit" class="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 text-lg font-semibold">Login</button>
+            </form>
+             <p class="mt-6 text-center text-sm">Don't have an account? <a href="#" id="show-signup-modal" class="font-medium text-black hover:underline">Sign up</a></p>
+        </div>
+    </div>
+    <div id="signup-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-8 transform scale-95 opacity-0">
+            <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Sign Up</h2><button id="close-signup-modal" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div>
+            <form id="signup-form">
+                <div class="mb-4"><label for="signup-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="signup-email" required class="mt-1 p-3 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black"></div>
+                <div class="mb-6"><label for="signup-password" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="signup-password" required class="mt-1 p-3 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black"></div>
+                <button type="submit" class="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 text-lg font-semibold">Create Account</button>
+            </form>
+             <p class="mt-6 text-center text-sm">Already have an account? <a href="#" id="show-login-modal" class="font-medium text-black hover:underline">Login</a></p>
+        </div>
+    </div>
+    
+<script>
+    // --- CONFIGURATION ---
+    const ownerEmail = "vivexatech@gmail.com"; 
+
+    // --- FIREBASE SETUP ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFUnalA7gBmwYqCXfsRtZugBfDWpT_uQo",
+      authDomain: "demoshop-cb486.firebaseapp.com",
+      projectId: "demoshop-cb486",
+      storageBucket: "demoshop-cb486.firebasestorage.app",
+      messagingSenderId: "773221651282",
+      appId: "1:773221651282:web:1ca1e2527ecd584675e08b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- INITIALIZE DATA ---
+        function initializeData() {
+            const initialProducts = [
+                { id: 1, name: "Modern Wristwatch", price: "12499", category: "Accessories", description: "A sleek and stylish wristwatch for the modern individual.", images: ["https://images.unsplash.com/photo-1524805444758-089113d48a6d?q=80&w=1888&auto=format&fit=crop"], sizes: ["One Size"], colors: ["Silver", "Black", "Gold"] },
+                { id: 2, name: "Leather Tote Bag", price: "5999", category: "Womens", description: "A spacious and elegant leather tote bag, perfect for everyday use.", images: ["https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=1887&auto=format&fit=crop"], sizes: ["Medium", "Large"], colors: ["Brown", "Black", "Tan"] },
+                { id: 3, name: "Classic Sunglasses", price: "3499", category: "Accessories", description: "Protect your eyes with these timeless classic sunglasses.", images: ["https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1780&auto=format&fit=crop"], sizes: ["One Size"], colors: ["Tortoise", "Black"] },
+                { id: 4, name: "Stylish White Sneakers", price: "6999", category: "Mens", description: "Comfortable and fashionable sneakers for any occasion.", images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=2070&auto=format&fit=crop"], sizes: ["8", "9", "10", "11"], colors: ["White", "Grey", "Black"] },
+                { id: 5, name: "Denim Jacket", price: "8999", category: "Womens", description: "A classic denim jacket that never goes out of style.", images: ["https://images.unsplash.com/photo-1543076499-8f4b0b7ef7b6?q=80&w=1887&auto=format&fit=crop"], sizes: ["S", "M", "L", "XL"], colors: ["Blue", "Black"] },
+                { id: 6, name: "Wireless Headphones", price: "14999", category: "Electronics", description: "Immerse yourself in music with these high-quality wireless headphones.", images: ["https://media.istockphoto.com/id/171276224/photo/electronics-shopping.jpg?s=612x612&w=0&k=20&c=mcOOmz2ZaakBmL1XHUNG-ymiNCgjGlODAp5jB6HFoj0="], sizes: ["One Size"], colors: ["Black", "White", "Rose Gold"] },
+                { id: 7, name: "Smartwatch Pro", price: "24999", category: "Electronics", description: "Stay connected and track your fitness with this advanced smartwatch.", images: ["https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=1964&auto=format&fit=crop"], sizes: ["40mm", "44mm"], colors: ["Space Grey", "Silver", "Blue"] },
+                { id: 8, name: "Bluetooth Speaker", price: "4599", category: "Electronics", description: "Portable speaker with rich sound and long battery life.", images: ["https://images.unsplash.com/photo-1589256469022-7f92a34aa85c?q=80&w=1887&auto=format&fit=crop"], sizes: ["One Size"], colors: ["Black", "Red", "Green"] }
+            ];
+            const initialDeal = { name: "Premium Leather Bag", newPrice: "₹5999", oldPrice: "₹9999", image: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=1887&auto=format&fit=crop" };
+
+            if (!localStorage.getItem('products')) localStorage.setItem('products', JSON.stringify(initialProducts));
+            if (!localStorage.getItem('dealOfTheDay')) localStorage.setItem('dealOfTheDay', JSON.stringify(initialDeal));
+        }
+
+        // --- HERO SLIDER ---
+        const sliderContainer = document.getElementById('hero-slider');
+        const slidesData = [
+            { image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop', title: 'Style That Defines You', subtitle: 'Discover curated collections that complement your unique personality.', btnLink: 'shop.html' },
+            { image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop', title: 'New Season Arrivals', subtitle: 'Check out the latest trends and refresh your wardrobe.', btnLink: 'shop.html' },
+            { image: 'https://www.triveniworld.com/cdn/shop/articles/innovative-tech-gadgets-you-need-to-own-in-2025-triveni-world.webp?v=1736040337', title: 'Latest Tech Gadgets', subtitle: 'Explore our new collection of electronics.', btnLink: 'shop.html?category=Electronics' }
+        ];
+
+        let currentSlide = 0;
+        let slideInterval;
+
+        function renderSlider() {
+            sliderContainer.innerHTML = `
+                ${slidesData.map((slide, index) => `
+                    <div class="slide ${index === 0 ? 'active' : ''}" style="background-image: url('${slide.image}');">
+                        <div class="bg-black/60 absolute inset-0"></div>
+                        <div class="container mx-auto px-6 text-center relative z-10 flex flex-col items-center justify-center h-full text-white">
+                            <h1 class="text-4xl md:text-7xl font-extrabold uppercase tracking-tighter leading-tight mb-4">${slide.title}</h1>
+                            <p class="text-lg md:text-xl font-light max-w-2xl mx-auto mb-8 text-gray-200">${slide.subtitle}</p>
+                            <a href="${slide.btnLink}" class="bg-white text-black font-bold py-3 px-10 rounded-md hover:bg-gray-200 transition duration-300 inline-block text-lg">Shop Now</a>
+                        </div>
+                    </div>
+                `).join('')}
+                <div id="prev-slide" class="slider-arrow"><i class="fas fa-chevron-left text-black"></i></div>
+                <div id="next-slide" class="slider-arrow"><i class="fas fa-chevron-right text-black"></i></div>
+                <div class="slider-dots">
+                    ${slidesData.map((_, index) => `<div class="dot ${index === 0 ? 'active' : ''}" data-index="${index}"></div>`).join('')}
+                </div>
+            `;
+
+            const slides = document.querySelectorAll('.slide');
+            const dots = document.querySelectorAll('.dot');
+
+            function showSlide(index) {
+                slides.forEach(s => s.classList.remove('active'));
+                dots.forEach(d => d.classList.remove('active'));
+                slides[index].classList.add('active');
+                dots[index].classList.add('active');
+            }
+
+            function nextSlide() {
+                currentSlide = (currentSlide + 1) % slides.length;
+                showSlide(currentSlide);
+            }
+
+            function prevSlide() {
+                currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                showSlide(currentSlide);
+            }
+
+            document.getElementById('next-slide').addEventListener('click', () => {
+                nextSlide();
+                resetInterval();
+            });
+            document.getElementById('prev-slide').addEventListener('click', () => {
+                prevSlide();
+                resetInterval();
+            });
+            dots.forEach(dot => {
+                dot.addEventListener('click', () => {
+                    currentSlide = parseInt(dot.dataset.index);
+                    showSlide(currentSlide);
+                    resetInterval();
+                });
+            });
+
+            function resetInterval() {
+                clearInterval(slideInterval);
+                slideInterval = setInterval(nextSlide, 5000);
+            }
+            
+            slideInterval = setInterval(nextSlide, 5000);
+        }
+
+        // --- RENDER FUNCTIONS ---
+        function renderProducts() {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const productGrid = document.getElementById('product-grid');
+            if (!productGrid) return;
+            if (products.length === 0) {
+                productGrid.innerHTML = '<p class="text-center col-span-full">No products found. Please add products from the admin panel.</p>';
+                return;
+            }
+            productGrid.innerHTML = products.slice(0, 4).map(p => `
+                <div class="group relative">
+                    <a href="product.html?id=${p.id}">
+                        <div class="bg-gray-100 rounded-lg overflow-hidden">
+                            <img src="${(p.images && p.images.length > 0) ? p.images[0] : 'https://placehold.co/600x600/e0e0e0/757575?text=No+Image'}" alt="${p.name}" class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-500">
+                        </div>
+                        <div class="pt-4 text-left">
+                            <h3 class="font-semibold text-lg">${p.name}</h3>
+                            <p class="text-gray-800 font-bold text-xl mt-1">₹${p.price}</p>
+                        </div>
+                    </a>
+                </div>`).join('');
+        }
+        
+        function renderDeal() {
+            const deal = JSON.parse(localStorage.getItem('dealOfTheDay')) || {};
+            if(document.getElementById('deal-name')) document.getElementById('deal-name').textContent = deal.name || 'Deal of the Day';
+            if(document.getElementById('deal-new-price')) document.getElementById('deal-new-price').textContent = deal.newPrice || '₹0.00';
+            if(document.getElementById('deal-old-price')) document.getElementById('deal-old-price').textContent = deal.oldPrice || '₹0.00';
+            if(document.getElementById('deal-image')) document.getElementById('deal-image').src = deal.image || 'https://placehold.co/600x600/ffffff/4f46e5?text=Deal';
+        }
+
+        // --- AUTHENTICATION & MODAL LOGIC ---
+        const adminLink = document.getElementById('admin-link');
+        const authButton = document.getElementById('auth-button');
+        const userInfo = document.getElementById('user-info');
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userInfo.textContent = `Hi, ${user.email.split('@')[0]}`;
+                userInfo.classList.remove('hidden');
+                authButton.innerHTML = '<i class="fas fa-sign-out-alt fa-lg"></i>'; 
+                if (user.email === ownerEmail) adminLink.classList.remove('hidden');
+                else adminLink.classList.add('hidden');
+            } else {
+                userInfo.classList.add('hidden');
+                authButton.innerHTML = '<i class="fas fa-user fa-lg"></i>'; 
+                adminLink.classList.add('hidden');
+            }
+        });
+        const loginModal = document.getElementById('login-modal');
+        const signupModal = document.getElementById('signup-modal');
+        function openModal(modal) { modal.classList.remove('hidden'); setTimeout(() => { modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0'); }, 50); }
+        function closeModal(modal) { modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); }
+        authButton.addEventListener('click', () => { if (auth.currentUser) auth.signOut(); else openModal(loginModal); });
+        document.getElementById('close-login-modal').addEventListener('click', () => closeModal(loginModal));
+        document.getElementById('close-signup-modal').addEventListener('click', () => closeModal(signupModal));
+        document.getElementById('show-signup-modal').addEventListener('click', (e) => { e.preventDefault(); closeModal(loginModal); openModal(signupModal); });
+        document.getElementById('show-login-modal').addEventListener('click', (e) => { e.preventDefault(); closeModal(signupModal); openModal(loginModal); });
+        document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; auth.signInWithEmailAndPassword(email, password).then((userCredential) => { closeModal(loginModal); if (userCredential.user.email === ownerEmail) window.location.href = 'admin.html'; }).catch(error => alert(error.message)); });
+        document.getElementById('signup-form').addEventListener('submit', (e) => { e.preventDefault(); const email = document.getElementById('signup-email').value; const password = document.getElementById('signup-password').value; auth.createUserWithEmailAndPassword(email, password).then(() => { closeModal(signupModal); alert('Account created successfully! Please log in.'); openModal(loginModal); }).catch(error => alert(error.message)); });
+        const searchButton = document.getElementById('search-button');
+        const searchModal = document.getElementById('search-modal');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        searchButton.addEventListener('click', () => { searchModal.classList.remove('hidden'); setTimeout(() => { searchModal.querySelector('.search-modal-content').classList.remove('scale-95', 'opacity-0'); searchInput.focus(); }, 50); });
+        searchModal.addEventListener('click', (e) => { if (e.target === searchModal) { searchModal.querySelector('.search-modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => searchModal.classList.add('hidden'), 300); } });
+        searchForm.addEventListener('submit', (e) => { e.preventDefault(); const query = searchInput.value.trim(); if (query) window.location.href = `shop.html?search=${encodeURIComponent(query)}`; });
+
+        // --- Initialize Page ---
+        initializeData();
+        renderSlider();
+        renderProducts();
+        renderDeal();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account - Vivexa Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .status-placed { background-color: #e0e7ff; color: #4338ca; }
+        .status-shipped { background-color: #dbeafe; color: #1d4ed8; }
+        .status-out-for-delivery { background-color: #fef3c7; color: #b45309; }
+        .status-delivered { background-color: #d1fae5; color: #065f46; }
+        .status-cancelled { background-color: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
+            <a href="ecommerce.html" class="text-2xl font-bold tracking-wider">Vivexa Store</a>
+            <div class="hidden lg:flex items-center space-x-10 text-sm font-medium">
+                <a href="ecommerce.html" class="text-gray-500 hover:text-black">Home</a>
+                <a href="shop.html" class="text-gray-500 hover:text-black">Shop</a>
+                <a href="account.html" class="text-black">My Account</a>
+            </div>
+            <div class="flex items-center space-x-6">
+                 <a href="cart.html" class="relative text-gray-600 hover:text-black">
+                    <i class="fas fa-shopping-bag fa-lg"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-black text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-6 my-12">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-8">My Orders</h1>
+            <div id="orders-container" class="space-y-6">
+                </div>
+        </div>
+    </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCFUnalA7gBmwYqCXfsRtZugBfDWpT_uQo",
+          authDomain: "demoshop-cb486.firebaseapp.com",
+          projectId: "demoshop-cb486",
+          storageBucket: "demoshop-cb486.firebasestorage.app",
+          messagingSenderId: "773221651282",
+          appId: "1:773221651282:web:1ca1e2527ecd584675e08b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const ordersContainer = document.getElementById('orders-container');
+
+        // Main security check
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // If user is logged in, load their orders
+                loadUserOrders(user.uid);
+            } else {
+                // If not logged in, alert and redirect to homepage
+                alert("Please log in to view your account.");
+                window.location.href = 'ecommerce.html';
+            }
+        });
+
+        function loadUserOrders(userId) {
+            ordersContainer.innerHTML = '<p>Loading your orders...</p>';
+            db.collection("orders").where("userId", "==", userId).orderBy("date", "desc").get()
+                .then((querySnapshot) => {
+                    ordersContainer.innerHTML = '';
+                    if (querySnapshot.empty) {
+                        ordersContainer.innerHTML = '<div class="text-center text-gray-500 bg-white p-8 rounded-lg shadow-sm">You have not placed any orders yet.</div>';
+                        return;
+                    }
+
+                    querySnapshot.forEach((doc) => {
+                        const order = doc.data();
+                        // Create a CSS-friendly class from the status
+                        const statusClass = `status-${(order.status || 'placed').toLowerCase().replace(/\s+/g, '-')}`;
+
+                        const productsHtml = order.items.map(item => `
+                            <div class="flex items-center gap-4 py-2">
+                                <img src="${item.image}" alt="${item.name}" class="w-14 h-14 object-cover rounded-md">
+                                <div>
+                                    <p class="font-semibold">${item.name}</p>
+                                    <p class="text-sm text-gray-600">Qty: ${item.quantity} | ₹${parseFloat(item.price).toFixed(2)}</p>
+                                </div>
+                            </div>
+                        `).join('');
+
+                        const orderCard = document.createElement('div');
+                        orderCard.className = 'bg-white p-6 rounded-lg shadow-sm';
+                        orderCard.innerHTML = `
+                            <div class="flex flex-wrap justify-between items-start border-b pb-4 mb-4 gap-4">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-500">Order Number</p>
+                                    <p class="text-lg font-bold text-indigo-600">${order.orderNumber}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-500">Date</p>
+                                    <p class="font-bold">${new Date(order.date).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-500">Total</p>
+                                    <p class="font-bold">${order.summary.total}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-500">Status</p>
+                                    <p><span class="status-badge ${statusClass}">${order.status || 'Placed'}</span></p>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold mb-2">Items</h4>
+                                <div class="space-y-2">${productsHtml}</div>
+                            </div>
+                        `;
+                        ordersContainer.appendChild(orderCard);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching orders: ", error);
+                    ordersContainer.innerHTML = '<p class="text-red-500">Could not load your orders.</p>';
+                });
+        }
+        
+        // Update cart count in header
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        document.getElementById('cart-count').textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+    });
+</script>
+
+</body>
+</html>
